@@ -203,19 +203,6 @@
                         android:textSize="25sp" />
 
                 <TextView
-                        android:id="@+id/clear_all_text_tv"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@+id/clear_all_tv"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="20dp"
-                        android:layout_marginTop="4dp"
-                        android:layout_toEndOf="@+id/save_tv"
-                        android:text="@string/clear_all"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp" />
-
-                <TextView
                         android:id="@+id/undo_tv"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

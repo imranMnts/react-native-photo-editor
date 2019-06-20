@@ -128,6 +128,7 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
         photoEditImageView.setImageBitmap(rotatedBitmap);
 
         closeTextView.setTypeface(newFont);
+        addTextView.setTypeface(newFont);
         addPencil.setTypeface(newFont);
         addImageEmojiTextView.setTypeface(newFont);
         saveTextView.setTypeface(newFont);
@@ -189,6 +190,7 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
         closeTextView.setOnClickListener(this);
         addImageEmojiTextView.setOnClickListener(this);
         addPencil.setOnClickListener(this);
+        addTextView.setOnClickListener(this);
         saveTextView.setOnClickListener(this);
         saveTextTextView.setOnClickListener(this);
         doneDrawingTextView.setOnClickListener(this);
@@ -239,7 +241,7 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
 
             }
             if (hiddenControls.get(i).toString().equalsIgnoreCase("draw")) {
-                addPencil.setVisibility(View.INVISIBLE);
+                addPencil.setVisibility(View.GONE);
             }
             if (hiddenControls.get(i).toString().equalsIgnoreCase("save")) {
                 saveTextTextView.setVisibility(View.INVISIBLE);
@@ -306,10 +308,12 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
                 colorCodeTextView = colorCode;
             }
         });
+        addTextEditText.setTextColor(getResources().getColor(R.color.red_color_picker));
+        colorCodeTextView = getResources().getColor(R.color.red_color_picker);
         addTextColorPickerRecyclerView.setAdapter(colorPickerAdapter);
         if (stringIsNotEmpty(text)) {
             addTextEditText.setText(text);
-            addTextEditText.setTextColor(colorCode == -1 ? getResources().getColor(R.color.white) : colorCode);
+            addTextEditText.setTextColor(colorCode == -1 ? getResources().getColor(R.color.red_color_picker) : colorCode);
         }
         final PopupWindow pop = new PopupWindow(PhotoEditorActivity.this);
         pop.setContentView(addTextPopupWindowRootView);
