@@ -35,6 +35,8 @@ import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Matrix;
+import android.support.media.ExifInterface;
 
 import com.ahmedadeltito.photoeditor.widget.SlidingUpPanelLayout;
 import com.ahmedadeltito.photoeditorsdk.BrushDrawingView;
@@ -63,7 +65,7 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
     private final String TAG = "PhotoEditorActivity";
     private RelativeLayout parentImageRelativeLayout;
     private RecyclerView drawingViewColorPickerRecyclerView;
-    private TextView undoTextView, undoTextTextView, doneDrawingTextView, eraseDrawingTextView;
+    private TextView doneDrawingTextView;
     private SlidingUpPanelLayout mLayout;
     private View topShadow;
     private RelativeLayout topShadowRelativeLayout;
@@ -72,6 +74,7 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
     private ArrayList<Integer> colorPickerColors;
     private int colorCodeTextView = -1;
     private PhotoEditorSDK photoEditorSDK;
+    private int imageOrientation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +86,17 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = 1;
         Bitmap bitmap = BitmapFactory.decodeFile(selectedImagePath, options);
+
+        Bitmap rotatedBitmap;
+        try {
+            ExifInterface exif = new ExifInterface(selectedImagePath);
+            imageOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+            rotatedBitmap = rotateBitmap(bitmap, imageOrientation, false);
+        } catch (IOException e) {
+            rotatedBitmap = bitmap;
+            imageOrientation = ExifInterface.ORIENTATION_NORMAL;
+            e.printStackTrace();
+        }
 
         Typeface newFont = getFontFromRes(R.raw.eventtusicons);
         emojiFont = getFontFromRes(R.raw.emojioneandroid);
@@ -98,12 +112,8 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
         TextView addImageEmojiTextView = (TextView) findViewById(R.id.add_image_emoji_tv);
         TextView saveTextView = (TextView) findViewById(R.id.save_tv);
         TextView saveTextTextView = (TextView) findViewById(R.id.save_text_tv);
-        undoTextView = (TextView) findViewById(R.id.undo_tv);
-        undoTextTextView = (TextView) findViewById(R.id.undo_text_tv);
         doneDrawingTextView = (TextView) findViewById(R.id.done_drawing_tv);
-        eraseDrawingTextView = (TextView) findViewById(R.id.erase_drawing_tv);
         TextView clearAllTextView = (TextView) findViewById(R.id.clear_all_tv);
-        TextView clearAllTextTextView = (TextView) findViewById(R.id.clear_all_text_tv);
         TextView goToNextTextView = (TextView) findViewById(R.id.go_to_next_screen_tv);
         ImageView photoEditImageView = (ImageView) findViewById(R.id.photo_edit_iv);
         mLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
@@ -115,14 +125,12 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
         ViewPager pager = (ViewPager) findViewById(R.id.image_emoji_view_pager);
         PageIndicator indicator = (PageIndicator) findViewById(R.id.image_emoji_indicator);
 
-        photoEditImageView.setImageBitmap(bitmap);
+        photoEditImageView.setImageBitmap(rotatedBitmap);
 
         closeTextView.setTypeface(newFont);
-        addTextView.setTypeface(newFont);
         addPencil.setTypeface(newFont);
         addImageEmojiTextView.setTypeface(newFont);
         saveTextView.setTypeface(newFont);
-        undoTextView.setTypeface(newFont);
         clearAllTextView.setTypeface(newFont);
         goToNextTextView.setTypeface(newFont);
         deleteTextView.setTypeface(newFont);
@@ -140,8 +148,9 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
 
         fragmentsList.add(imageFragment);
 
-        EmojiFragment emojiFragment = new EmojiFragment();
-        fragmentsList.add(emojiFragment);
+        // Uncomment this part to display emojies
+//        EmojiFragment emojiFragment = new EmojiFragment();
+//        fragmentsList.add(emojiFragment);
 
         PreviewSlidePagerAdapter adapter = new PreviewSlidePagerAdapter(getSupportFragmentManager(), fragmentsList);
         pager.setAdapter(adapter);
@@ -179,16 +188,11 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
 
         closeTextView.setOnClickListener(this);
         addImageEmojiTextView.setOnClickListener(this);
-        addTextView.setOnClickListener(this);
         addPencil.setOnClickListener(this);
         saveTextView.setOnClickListener(this);
         saveTextTextView.setOnClickListener(this);
-        undoTextView.setOnClickListener(this);
-        undoTextTextView.setOnClickListener(this);
         doneDrawingTextView.setOnClickListener(this);
-        eraseDrawingTextView.setOnClickListener(this);
         clearAllTextView.setOnClickListener(this);
-        clearAllTextTextView.setOnClickListener(this);
         goToNextTextView.setOnClickListener(this);
 
         ArrayList<Integer> intentColors = (ArrayList<Integer>) getIntent().getExtras().getSerializable("colorPickerColors");
@@ -230,7 +234,6 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
             }
             if (hiddenControls.get(i).toString().equalsIgnoreCase("clear")) {
                 clearAllTextView.setVisibility(View.INVISIBLE);
-                clearAllTextTextView.setVisibility(View.INVISIBLE);
             }
             if (hiddenControls.get(i).toString().equalsIgnoreCase("crop")) {
 
@@ -241,9 +244,6 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
             if (hiddenControls.get(i).toString().equalsIgnoreCase("save")) {
                 saveTextTextView.setVisibility(View.INVISIBLE);
                 saveTextView.setVisibility(View.INVISIBLE);
-            }
-            if (hiddenControls.get(i).toString().equalsIgnoreCase("share")) {
-
             }
             if (hiddenControls.get(i).toString().equalsIgnoreCase("sticker")) {
                 addImageEmojiTextView.setVisibility(View.INVISIBLE);
@@ -344,7 +344,6 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
             updateView(View.GONE);
             drawingViewColorPickerRecyclerView.setVisibility(View.VISIBLE);
             doneDrawingTextView.setVisibility(View.VISIBLE);
-            eraseDrawingTextView.setVisibility(View.VISIBLE);
             LinearLayoutManager layoutManager = new LinearLayoutManager(PhotoEditorActivity.this, LinearLayoutManager.HORIZONTAL, false);
             drawingViewColorPickerRecyclerView.setLayoutManager(layoutManager);
             drawingViewColorPickerRecyclerView.setHasFixedSize(true);
@@ -360,7 +359,6 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
             updateView(View.VISIBLE);
             drawingViewColorPickerRecyclerView.setVisibility(View.GONE);
             doneDrawingTextView.setVisibility(View.GONE);
-            eraseDrawingTextView.setVisibility(View.GONE);
         }
     }
 
@@ -398,11 +396,20 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
                             FileOutputStream out = new FileOutputStream(file);
                             if (parentImageRelativeLayout != null) {
                                 parentImageRelativeLayout.setDrawingCacheEnabled(true);
-                                parentImageRelativeLayout.getDrawingCache().compress(Bitmap.CompressFormat.JPEG, 80, out);
+                                Bitmap bitmap = parentImageRelativeLayout.getDrawingCache();
+                                Bitmap rotatedBitmap = rotateBitmap(bitmap, imageOrientation, true);
+                                rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, out);
                             }
 
                             out.flush();
                             out.close();
+                            try {
+                                ExifInterface exifDest = new ExifInterface(file.getAbsolutePath());
+                                exifDest.setAttribute(ExifInterface.TAG_ORIENTATION, Integer.toString(imageOrientation));
+                                exifDest.saveAttributes();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         } catch (Exception var7) {
                             var7.printStackTrace();
                         }
@@ -442,11 +449,20 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
                     FileOutputStream out = new FileOutputStream(file);
                     if (parentImageRelativeLayout != null) {
                         parentImageRelativeLayout.setDrawingCacheEnabled(true);
-                        parentImageRelativeLayout.getDrawingCache().compress(Bitmap.CompressFormat.JPEG, 80, out);
+                        Bitmap bitmap = parentImageRelativeLayout.getDrawingCache();
+                        Bitmap rotatedBitmap = rotateBitmap(bitmap, imageOrientation, true);
+                        rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, out);
                     }
 
                     out.flush();
                     out.close();
+                    try {
+                        ExifInterface exifDest = new ExifInterface(file.getAbsolutePath());
+                        exifDest.setAttribute(ExifInterface.TAG_ORIENTATION, Integer.toString(imageOrientation));
+                        exifDest.saveAttributes();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 } catch (Exception var7) {
                     var7.printStackTrace();
                 }
@@ -515,12 +531,8 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
             updateBrushDrawingView(false);
         } else if (v.getId() == R.id.save_tv || v.getId() == R.id.save_text_tv) {
             returnBackWithSavedImage();
-        } else if (v.getId() == R.id.clear_all_tv || v.getId() == R.id.clear_all_text_tv) {
+        } else if (v.getId() == R.id.clear_all_tv) {
             clearAllViews();
-        } else if (v.getId() == R.id.undo_text_tv || v.getId() == R.id.undo_tv) {
-            undoViews();
-        } else if (v.getId() == R.id.erase_drawing_tv) {
-            eraseDrawing();
         } else if (v.getId() == R.id.go_to_next_screen_tv) {
             returnBackWithUpdateImage();
         }
@@ -533,16 +545,9 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
 
     @Override
     public void onAddViewListener(ViewType viewType, int numberOfAddedViews) {
-        if (numberOfAddedViews > 0) {
-            undoTextView.setVisibility(View.VISIBLE);
-            undoTextTextView.setVisibility(View.VISIBLE);
-        }
         switch (viewType) {
             case BRUSH_DRAWING:
                 Log.i("BRUSH_DRAWING", "onAddViewListener");
-                break;
-            case EMOJI:
-                Log.i("EMOJI", "onAddViewListener");
                 break;
             case IMAGE:
                 Log.i("IMAGE", "onAddViewListener");
@@ -556,10 +561,6 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
     @Override
     public void onRemoveViewListener(int numberOfAddedViews) {
         Log.i(TAG, "onRemoveViewListener");
-        if (numberOfAddedViews == 0) {
-            undoTextView.setVisibility(View.GONE);
-            undoTextTextView.setVisibility(View.GONE);
-        }
     }
 
     @Override
@@ -616,7 +617,7 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
 
         @Override
         public int getCount() {
-            return 2;
+            return 1;
         }
     }
 
@@ -658,5 +659,64 @@ public class PhotoEditorActivity extends AppCompatActivity implements View.OnCli
         Log.d(TAG, "Successfully loaded font.");
 
         return tf;
+    }
+
+    private static Bitmap rotateBitmap(Bitmap bitmap, int orientation, boolean reverse) {
+        Matrix matrix = new Matrix();
+        switch (orientation) {
+            case ExifInterface.ORIENTATION_NORMAL:
+                return bitmap;
+            case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
+                matrix.setScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                matrix.setRotate(180);
+                break;
+            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
+                matrix.setRotate(180);
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_TRANSPOSE:
+                if (!reverse) {
+                    matrix.setRotate(90);
+                } else {
+                    matrix.setRotate(-90);
+                }
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                if (!reverse) {
+                    matrix.setRotate(90);
+                } else {
+                    matrix.setRotate(-90);
+                }
+                break;
+            case ExifInterface.ORIENTATION_TRANSVERSE:
+                if (!reverse) {
+                    matrix.setRotate(-90);
+                } else {
+                    matrix.setRotate(90);
+                }
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                if (!reverse) {
+                    matrix.setRotate(-90);
+                } else {
+                    matrix.setRotate(90);
+                }
+                break;
+            default:
+                return bitmap;
+        }
+        try {
+            Bitmap bmRotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+            bitmap.recycle();
+
+            return bmRotated;
+        } catch (OutOfMemoryError e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
